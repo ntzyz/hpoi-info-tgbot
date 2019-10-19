@@ -1,0 +1,4 @@
+node_modules
+db.sqlite
+config.ts
+.DS_Store
