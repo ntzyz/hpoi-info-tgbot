@@ -78,8 +78,8 @@ async function fetch_data (): Promise<Array<HpoiInformationItem>> {
   const response = await axios.post('https://www.hpoi.net/user/home/ajax', request_body, {
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
-      'User-Agent': 
-    },
+      'User-Agent': user_agent
+    }
   });
 
   const { html } = response.data.data;
