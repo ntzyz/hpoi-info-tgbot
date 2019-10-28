@@ -3,7 +3,7 @@ import axios from 'axios';
 import { JSDOM } from 'jsdom';
 import * as httpsProxyAgent from 'https-proxy-agent';
 import * as XRegExp from 'xregexp';
-import { publish_channel_id, bot_owner_id, bot_token } from './config';
+import { publish_channel_id, bot_owner_id, bot_token, user_agent } from './config';
 
 interface HpoiInformationItem {
   hobby_id: number,
@@ -14,10 +14,10 @@ interface HpoiInformationItem {
   info_type: string,
 };
 
-const isProd = process.env.NODE_ENV === 'production';
-const isTest = process.env.NODE_ENV === 'test';
+const is_prod = process.env.NODE_ENV === 'production';
+const is_test = process.env.NODE_ENV === 'test';
 
-function getTimestamp (offsetDays: number = 0): number {
+function get_timestamp (offsetDays: number = 0): number {
   const currentTime = new Date().getTime();
   return Math.floor(currentTime / 1000 + offsetDays * 24 * 60 * 60);
 }
@@ -45,7 +45,7 @@ function initialize_database (): Promise<sqlite.Database> {
 function check_record_existence (db: sqlite.Database, hobby_id: number, info_type: string): Promise<boolean> {
   return new Promise((resolve, reject) => {
     db.get('SELECT COUNT(*) AS count FROM published_records WHERE hobby_id = ? AND info_type = ? AND publish_timestamp > ?', [
-      hobby_id, info_type, getTimestamp(-7),
+      hobby_id, info_type, get_timestamp(-7),
     ], (error, row) => {
       if (error) {
         reject(error);
@@ -60,7 +60,7 @@ function check_record_existence (db: sqlite.Database, hobby_id: number, info_typ
 function create_publish_record (db: sqlite.Database, hobby_id: number, info_type: string): Promise<void> {
   return new Promise((resolve, reject) => {
     db.run('INSERT INTO published_records(hobby_id, info_type, publish_date, publish_timestamp) VALUES(?, ?, date("now"), ?)', [
-      hobby_id, info_type, getTimestamp(),
+      hobby_id, info_type, get_timestamp(),
     ], (error) => {
       if (error) {
         reject(error);
@@ -78,7 +78,7 @@ async function fetch_data (): Promise<Array<HpoiInformationItem>> {
   const response = await axios.post('https://www.hpoi.net/user/home/ajax', request_body, {
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
-      'User-Agent': 'Mozilla/5.0 (compatible; hpoi info bot; +https://ntzyz.io/hpoi-info-crawler/)'
+      'User-Agent': 
     },
   });
 
@@ -118,7 +118,7 @@ function escape_telegram_hashtag (text: string) {
 async function fetch_tags (hobby_id: number): Promise<Array<string>> {
   const response = await axios.get(`https://www.hpoi.net/hobby/${hobby_id}`, {
     headers: {
-      'User-Agent': 'Mozilla/5.0 (compatible; hpoi info bot; +https://ntzyz.io/hpoi-info-crawler/)'
+      'User-Agent': user_agent
     },
   });
 
@@ -141,7 +141,7 @@ async function main () {
   const data = await fetch_data();
   let post_count = 0;
 
-  const http = (isProd || isTest) ? axios : axios.create({
+  const http = (is_prod || is_test) ? axios : axios.create({
     httpAgent: new httpsProxyAgent('http://localhost:1087'),
     httpsAgent: new httpsProxyAgent('http://localhost:1087'),
   })
@@ -155,7 +155,7 @@ async function main () {
 
     post_count += 1;
     await http.post(`https://api.telegram.org/bot${bot_token}/sendPhoto`, {
-      chat_id: isProd ? publish_channel_id : bot_owner_id,
+      chat_id: is_prod ? publish_channel_id : bot_owner_id,
       parse_mode: 'HTML',
       caption: `<a href="${item.link_path}">【${item.info_type}】${item.info_title}</a>\nTags: ${tags.join(' ')}`,
       photo: item.image_url,
