@@ -73,6 +73,7 @@ function create_publish_record (db: sqlite.Database, hobby_id: number, info_type
 }
 
 async function fetch_data (): Promise<Array<HpoiInformationItem>> {
+  console.info('Fetching latest feeds from www.hpoi.net');
   const request_body = 'page=1&type=info&catType=all'
 
   const response = await axios.post('https://www.hpoi.net/user/home/ajax', request_body, {
@@ -89,11 +90,15 @@ async function fetch_data (): Promise<Array<HpoiInformationItem>> {
   return info_list.map((element) => {
     const link_path = element.querySelector('.overlay-container a').getAttribute('href');
     const type_name = element.querySelector('.overlay-container .type-name').textContent;
-    const image_url = element.querySelector('.overlay-container img').getAttribute('src');
     const info_title = element.querySelector('.home-info-content .user-content').textContent;
     const info_type = element.querySelector('.home-info-content .user-name').firstChild.textContent;
-
     const hobby_id = Number(link_path.match(/\d+/ui));
+
+    let image_url = element.querySelector('.overlay-container img').getAttribute('src');
+
+    if (image_url.indexOf('?') > 0) {
+      image_url = image_url.split('?')[0];
+    }
 
     return {
       hobby_id,
@@ -151,8 +156,10 @@ async function main () {
       continue;
     }
 
+    console.info('Found info (hobby_id = ' + item.hobby_id + ') not published, fetching tags from hpoi.net ...');
     const tags = await fetch_tags(item.hobby_id);
 
+    console.info('Publishing info to telegram');
     post_count += 1;
     await http.post(`https://api.telegram.org/bot${bot_token}/sendPhoto`, {
       chat_id: is_prod ? publish_channel_id : bot_owner_id,
