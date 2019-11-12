@@ -1,5 +1,7 @@
 import * as sqlite from 'sqlite3';
-import axios from 'axios';
+import * as http from 'http';
+import * as https from 'https';
+import Axios from 'axios';
 import { JSDOM } from 'jsdom';
 import * as httpsProxyAgent from 'https-proxy-agent';
 import * as XRegExp from 'xregexp';
@@ -16,6 +18,11 @@ interface HpoiInformationItem {
 
 const is_prod = process.env.NODE_ENV === 'production';
 const is_test = process.env.NODE_ENV === 'test';
+
+const axios = Axios.create({
+  httpsAgent: new https.Agent({ keepAlive: true, keepAliveMsecs: 10000 }),
+  httpAgent: new http.Agent({ keepAlive: true, keepAliveMsecs: 10000 }),
+});
 
 function get_timestamp (offsetDays: number = 0): number {
   const currentTime = new Date().getTime();
@@ -146,7 +153,7 @@ async function main () {
   const data = await fetch_data();
   let post_count = 0;
 
-  const http = (is_prod || is_test) ? axios : axios.create({
+  const http = (is_prod || is_test) ? axios : Axios.create({
     httpAgent: new httpsProxyAgent('http://localhost:1087'),
     httpsAgent: new httpsProxyAgent('http://localhost:1087'),
   })
@@ -161,7 +168,7 @@ async function main () {
 
     console.info('Publishing info to telegram');
     post_count += 1;
-    await http.post(`https://api.telegram.org/bot${bot_token}/sendPhoto`, {
+    is_prod && await http.post(`https://api.telegram.org/bot${bot_token}/sendPhoto`, {
       chat_id: is_prod ? publish_channel_id : bot_owner_id,
       parse_mode: 'HTML',
       caption: `<a href="${item.link_path}">【${item.info_type}】${item.info_title}</a>\nTags: ${tags.join(' ')}`,
