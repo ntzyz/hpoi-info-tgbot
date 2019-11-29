@@ -19,6 +19,8 @@ interface HpoiInformationItem {
 const is_prod = process.env.NODE_ENV === 'production';
 const is_test = process.env.NODE_ENV === 'test';
 
+const telegram_invalid_image_response = 'Bad Request: wrong file identifier/HTTP URL specified';
+
 const axios = Axios.create({
   httpsAgent: new https.Agent({ keepAlive: true, keepAliveMsecs: 10000 }),
   httpAgent: new http.Agent({ keepAlive: true, keepAliveMsecs: 10000 }),
@@ -167,15 +169,34 @@ async function main () {
     const tags = await fetch_tags(item.hobby_id);
 
     console.info('Publishing info to telegram');
-    post_count += 1;
-    is_prod && await http.post(`https://api.telegram.org/bot${bot_token}/sendPhoto`, {
-      chat_id: is_prod ? publish_channel_id : bot_owner_id,
-      parse_mode: 'HTML',
-      caption: `<a href="${item.link_path}">【${item.info_type}】${item.info_title}</a>\nTags: ${tags.join(' ')}`,
-      photo: item.image_url,
-      disable_web_page_preview: true,
-      disable_notification: true,
-    });
+    if (is_prod) {
+      try {
+        await http.post(`https://api.telegram.org/bot${bot_token}/sendPhoto`, {
+          chat_id: is_prod ? publish_channel_id : bot_owner_id,
+          parse_mode: 'HTML',
+          caption: `<a href="${item.link_path}">【${item.info_type}】${item.info_title}</a>\nTags: ${tags.join(' ')}`,
+          photo: item.image_url,
+          disable_web_page_preview: true,
+          disable_notification: true,
+        });
+      } catch (error) {
+        if (error.response && error.response.status === 400 && error.response.data.description === telegram_invalid_image_response) {
+          await http.post(`https://api.telegram.org/bot${bot_token}/sendMessage`, {
+            chat_id: is_prod ? publish_channel_id : bot_owner_id,
+            parse_mode: 'HTML',
+            text: `<a href="${item.link_path}">【${item.info_type}】${item.info_title}</a>\nTags: ${tags.join(' ')}`,
+            disable_web_page_preview: true,
+            disable_notification: true,
+          });
+        } else {
+          console.info('Skipping info (hobby_id = ' + item.hobby_id + '), error is: ');
+          console.error(error);
+          continue;
+        }
+      }
+
+      post_count += 1;
+    }
 
     await create_publish_record(db, item.hobby_id, item.info_type);
   }
