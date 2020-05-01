@@ -1,11 +1,11 @@
 import * as sqlite from 'sqlite3';
 import * as http from 'http';
 import * as https from 'https';
-import Axios from 'axios';
+import Axios, { AxiosInstance } from 'axios';
 import { JSDOM } from 'jsdom';
 import * as httpsProxyAgent from 'https-proxy-agent';
 import * as XRegExp from 'xregexp';
-import { publish_channel_id, bot_owner_id, bot_token, user_agent } from './config';
+import { publish_channel_id, publish_sub_channel_id, bot_owner_id, bot_token, user_agent } from './config';
 
 interface HpoiInformationItem {
   hobby_id: number,
@@ -150,6 +150,38 @@ async function fetch_tags (hobby_id: number): Promise<Array<string>> {
   return results;
 }
 
+async function publish_info_to_telegram (item: HpoiInformationItem, channel_id: number, tags: string[], http: AxiosInstance) {
+  try {
+    await http.post(`https://api.telegram.org/bot${bot_token}/sendPhoto`, {
+      chat_id: channel_id,
+      parse_mode: 'HTML',
+      caption: `<a href="${item.link_path}">【${item.info_type}】${item.info_title}</a>\nTags: ${tags.join(' ')}`,
+      photo: item.image_url,
+      disable_web_page_preview: true,
+      disable_notification: true,
+    });
+
+    return 0;
+  } catch (error) {
+    if (error.response && error.response.status === 400 && error.response.data.description === telegram_invalid_image_response) {
+      await http.post(`https://api.telegram.org/bot${bot_token}/sendMessage`, {
+        chat_id: channel_id,
+        parse_mode: 'HTML',
+        text: `<a href="${item.link_path}">【${item.info_type}】${item.info_title}</a>\nTags: ${tags.join(' ')}`,
+        disable_web_page_preview: true,
+        disable_notification: true,
+      });
+
+      return 0;
+    } else {
+      console.info('Skipping info (hobby_id = ' + item.hobby_id + '), error is: ');
+      console.error(error);
+
+      return 1;
+    }
+  }
+}
+
 async function main () {
   const db = await initialize_database();
   const data = await fetch_data();
@@ -170,29 +202,12 @@ async function main () {
 
     console.info('Publishing info to telegram');
     if (is_prod) {
-      try {
-        await http.post(`https://api.telegram.org/bot${bot_token}/sendPhoto`, {
-          chat_id: is_prod ? publish_channel_id : bot_owner_id,
-          parse_mode: 'HTML',
-          caption: `<a href="${item.link_path}">【${item.info_type}】${item.info_title}</a>\nTags: ${tags.join(' ')}`,
-          photo: item.image_url,
-          disable_web_page_preview: true,
-          disable_notification: true,
-        });
-      } catch (error) {
-        if (error.response && error.response.status === 400 && error.response.data.description === telegram_invalid_image_response) {
-          await http.post(`https://api.telegram.org/bot${bot_token}/sendMessage`, {
-            chat_id: is_prod ? publish_channel_id : bot_owner_id,
-            parse_mode: 'HTML',
-            text: `<a href="${item.link_path}">【${item.info_type}】${item.info_title}</a>\nTags: ${tags.join(' ')}`,
-            disable_web_page_preview: true,
-            disable_notification: true,
-          });
-        } else {
-          console.info('Skipping info (hobby_id = ' + item.hobby_id + '), error is: ');
-          console.error(error);
-          continue;
-        }
+      if ((await publish_info_to_telegram(item, is_prod ? publish_channel_id : bot_owner_id, tags, http)) < 0) {
+        continue;
+      }
+
+      if (tags.includes('比例人形') && (await publish_info_to_telegram(item, is_prod ? publish_sub_channel_id : bot_owner_id, tags, http)) < 0) {
+        continue;
       }
 
       post_count += 1;
