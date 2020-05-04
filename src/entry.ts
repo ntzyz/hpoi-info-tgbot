@@ -206,7 +206,7 @@ async function main () {
         continue;
       }
 
-      if (tags.includes('比例人形') && (await publish_info_to_telegram(item, is_prod ? publish_sub_channel_id : bot_owner_id, tags, http)) < 0) {
+      if (tags.includes('#比例人形') && (await publish_info_to_telegram(item, is_prod ? publish_sub_channel_id : bot_owner_id, tags, http)) < 0) {
         continue;
       }
 
