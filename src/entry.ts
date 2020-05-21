@@ -24,6 +24,7 @@ const telegram_invalid_image_response = 'Bad Request: wrong file identifier/HTTP
 const axios = Axios.create({
   httpsAgent: new https.Agent({ keepAlive: true, keepAliveMsecs: 10000 }),
   httpAgent: new http.Agent({ keepAlive: true, keepAliveMsecs: 10000 }),
+  timeout: 30000,
 });
 
 function get_timestamp (offsetDays: number = 0): number {
@@ -190,6 +191,7 @@ async function main () {
   const http = (is_prod || is_test) ? axios : Axios.create({
     httpAgent: new httpsProxyAgent('http://localhost:1087'),
     httpsAgent: new httpsProxyAgent('http://localhost:1087'),
+    timeout: 30000,
   })
 
   for (const item of data) {
