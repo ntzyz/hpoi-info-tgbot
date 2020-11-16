@@ -5,7 +5,7 @@ import Axios, { AxiosInstance } from 'axios';
 import { JSDOM } from 'jsdom';
 import * as httpsProxyAgent from 'https-proxy-agent';
 import * as XRegExp from 'xregexp';
-import { publish_channel_id, publish_sub_channel_id, bot_owner_id, bot_token, user_agent } from './config';
+import { publish_channel_id, publish_sub_channel_id, bot_owner_id, bot_token, user_agent, cookie_utoken } from './config';
 
 interface HpoiInformationItem {
   hobby_id: number,
@@ -89,7 +89,8 @@ async function fetch_data (): Promise<Array<HpoiInformationItem>> {
   const response = await axios.post('https://www.hpoi.net/user/home/ajax', request_body, {
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
-      'User-Agent': user_agent
+      'User-Agent': user_agent,
+      'Cookie': `utoken=${cookie_utoken}`
     }
   });
 
@@ -133,7 +134,8 @@ function escape_telegram_hashtag (text: string) {
 async function fetch_tags (hobby_id: number): Promise<Array<string>> {
   const response = await axios.get(`https://www.hpoi.net/hobby/${hobby_id}`, {
     headers: {
-      'User-Agent': user_agent
+      'User-Agent': user_agent,
+      'Cookie': `utoken=${cookie_utoken}`
     },
   });
 
