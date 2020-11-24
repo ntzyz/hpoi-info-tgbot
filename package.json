@@ -7,6 +7,7 @@
   },
   "devDependencies": {
     "@types/jsdom": "^12.2.4",
+    "@types/node": "^14.14.9",
     "@types/sqlite3": "^3.1.5",
     "@types/xregexp": "^3.0.30",
     "https-proxy-agent": "^3.0.0",

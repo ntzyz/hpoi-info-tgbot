@@ -94,15 +94,15 @@ async function fetch_data (): Promise<Array<HpoiInformationItem>> {
     }
   });
 
-  const { html } = response.data.data;
+  const html = response.data;
   const { window } = new JSDOM(html);
   const info_list = Array.from(window.document.querySelectorAll('.home-info'));
 
   return info_list.map((element) => {
     const link_path = element.querySelector('.overlay-container a').getAttribute('href');
-    const type_name = element.querySelector('.overlay-container .type-name').textContent;
-    const info_title = element.querySelector('.home-info-content .user-content').textContent;
-    const info_type = element.querySelector('.home-info-content .user-name').firstChild.textContent;
+    const type_name = element.querySelector('.overlay-container .type-name').textContent.trim();
+    const info_title = element.querySelector('.home-info-content .user-content').textContent.trim();
+    const info_type = element.querySelector('.home-info-content .user-name').firstChild.textContent.trim();
     const hobby_id = Number(link_path.match(/\d+/ui));
 
     let image_url = element.querySelector('.overlay-container img').getAttribute('src');
