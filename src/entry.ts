@@ -223,6 +223,11 @@ async function main () {
   return post_count;
 }
 
+/** Force exit if not finish this round of publish in 5 minuts. */
+setTimeout(() => {
+  process.exit(1)
+}, 5 * 60 * 1000);
+
 main().then((count) => {
   console.log(`Publish process finished, new post count is ${count}`);
   process.exit(0);
