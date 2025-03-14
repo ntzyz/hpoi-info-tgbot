@@ -141,7 +141,7 @@ async function fetch_tags(hobby_id: number): Promise<Array<string>> {
   const { window } = new JSDOM(response.data);
   const { document } = window;
 
-  const results = Array.from(document.querySelector('table.info-box')
+  const results = Array.from(document.querySelector('.infoList-box')
     .querySelectorAll('a'))
     .map(el => el.textContent.trim()
       .replace(/\s/g, '_'))
